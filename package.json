@@ -1,7 +1,7 @@
 {
   "name": "Priyansh",
   "version": "10.1.1",
-  "description": "A simple Facebook Messenger Bot made by 𝐏𝐫𝐢𝐲𝐚𝐧𝐬𝐡 𝐑𝐚𝐣𝐩𝐮𝐭.",
+  "description": "A simple Facebook Messenger Bot made by 𝐏𝐫𝐢𝐲𝐚𝐧𝐬h 𝐑𝐚𝐣𝐩𝐮𝐭.",
   "main": "Priyansh.js",
   "engines": {
       "node": "20.x",
@@ -114,7 +114,7 @@
       "vtuber-wiki": "^1.1.5",
       "websocket-stream": "^5.5.2",
       "wikijs": "^6.3.3",
-      "Youtube-api": "^1.1.0",
+      "youtube-api": "^1.1.0",  // <-- यह लाइन ठीक कर दी गई है
       "youtubei.js": "^1.4.5",
       "yt-search": "^2.10.4",
       "ytdl-core": "^4.11.2",

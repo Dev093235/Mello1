@@ -114,7 +114,7 @@
       "vtuber-wiki": "^1.1.5",
       "websocket-stream": "^5.5.2",
       "wikijs": "^6.3.3",
-      "youtube-api": "^1.1.0",  // <-- यह लाइन ठीक कर दी गई है
+      "youtube-api": "^1.1.0",
       "youtubei.js": "^1.4.5",
       "yt-search": "^2.10.4",
       "ytdl-core": "^4.11.2",

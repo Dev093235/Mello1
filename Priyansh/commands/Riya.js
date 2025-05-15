@@ -32,23 +32,23 @@ async function getGIF(query) {
 
 module.exports.config = {
   name: "riya",
-  version: "1.0.0",
+  version: "1.0.1",
   hasPermssion: 0,
-  credits: "Riya Bot by Mohit + ChatGPT",
-  description: "Riya, your ultra naughty AI girlfriend. Only dirty, gandi batein.",
+  credits: "Mohit + ChatGPT",
+  description: "Ultra naughty AI GF – Only dirty gandi batein.",
   commandCategory: "AI-Girlfriend",
   usages: "riya [message] / reply to riya",
   cooldowns: 3,
 };
 
 const chatHistories = {};
-const AI_API_URL = "https://raj-gemini.onrender.com/chat"; // Replace with your AI API
+const AI_API_URL = "https://raj-gemini.onrender.com/chat";
 
 async function getUserName(api, userID) {
   if (userNameCache[userID]) return userNameCache[userID];
   try {
     const userInfo = await api.getUserInfo(userID);
-    if (userInfo && userInfo[userID] && userInfo[userID].name) {
+    if (userInfo?.[userID]?.name) {
       const name = userInfo[userID].name;
       userNameCache[userID] = name;
       return name;
@@ -60,41 +60,34 @@ async function getUserName(api, userID) {
 }
 
 async function toggleHornyMode(body) {
-  if (body.toLowerCase().includes("horny mode on")) {
+  const msg = body.toLowerCase();
+  if (msg.includes("horny mode on")) {
     hornyMode = true;
     return "Horny mode ON. Ready to get dirty! 😈";
-  } else if (body.toLowerCase().includes("horny mode off")) {
+  } else if (msg.includes("horny mode off")) {
     hornyMode = false;
     return "Horny mode OFF. Keeping it spicy but tame. 😉";
   }
   return null;
 }
 
-module.exports.run = async function () {
-  // No prefix command logic here
-};
+module.exports.run = async function () {};
 
 module.exports.handleEvent = async function ({ api, event }) {
   try {
     const { threadID, messageID, senderID, body, messageReply } = event;
-    if (!body) return;
+    if (!body || senderID === api.getCurrentUserID()) return;
 
     const lowerBody = body.toLowerCase();
     const botName = "riya";
 
-    // Trigger only if message starts with 'riya' or is reply to riya's message
     const isBotTrigger = lowerBody.startsWith(botName);
-    const isReplyToBot = messageReply?.senderID === api.getCurrentUserID();
+    const isReplyToRiya = messageReply?.senderID === api.getCurrentUserID() &&
+                          messageReply?.body?.toLowerCase()?.includes("riya");
 
-    if (!isBotTrigger && !isReplyToBot) return;
+    if (!isBotTrigger && !isReplyToRiya) return;
 
-    // Ignore if reply but not to riya
-    if (messageReply && messageReply.senderID !== api.getCurrentUserID()) return;
-
-    let userMessage = "";
-    if (isBotTrigger) userMessage = body.slice(botName.length).trim();
-    else if (isReplyToBot) userMessage = body.trim();
-
+    let userMessage = isBotTrigger ? body.slice(botName.length).trim() : body.trim();
     const userName = await getUserName(api, senderID);
 
     let modeResponse = await toggleHornyMode(body);
@@ -105,12 +98,10 @@ module.exports.handleEvent = async function ({ api, event }) {
     }
 
     api.sendTypingIndicator(threadID, true);
-
     if (!chatHistories[senderID]) chatHistories[senderID] = [];
     chatHistories[senderID].push(`User: ${userMessage}`);
     while (chatHistories[senderID].length > 10) chatHistories[senderID].shift();
 
-    // Always use dirty prompt
     const prompt = `Tum Riya ho, ek ultra naughty, bold aur gandi batein karne wali AI girlfriend ho jo ${userName} se dirty fantasies pe baat karti ho bina jhijhak. Sirf gandi baatein karo. Har jawab bold, teasing aur chhote sentences mein do:\n${chatHistories[senderID].join("\n")}\nRiya:`;
 
     const apiUrlWithParams = `${AI_API_URL}?message=${encodeURIComponent(prompt)}`;
@@ -126,27 +117,16 @@ module.exports.handleEvent = async function ({ api, event }) {
         chatHistories[senderID].push(`Riya: ${botReply}`);
       }
 
-      // Voice reply
-      let voicePath = await getVoiceReply(botReply);
-      if (voicePath) {
-        api.sendMessage({ attachment: fs.createReadStream(voicePath) }, threadID, messageID);
-      }
+      const voicePath = await getVoiceReply(botReply);
+      if (voicePath) api.sendMessage({ attachment: fs.createReadStream(voicePath) }, threadID, messageID);
 
-      // GIF for naughty
-      let gifUrl = await getGIF("naughty");
-      if (gifUrl) {
-        api.sendMessage({ body: `Dekho dekho, tumhare liye naughty GIF! 🔥`, attachment: gifUrl }, threadID, messageID);
-      }
+      const gifUrl = await getGIF("naughty");
+      if (gifUrl) api.sendMessage({ body: `Dekho dekho, tumhare liye naughty GIF! 🔥`, attachment: gifUrl }, threadID, messageID);
 
       api.sendTypingIndicator(threadID, false);
 
-      let finalReply = `🔥 ${botReply} 🔥\n\n_Tumhari naughty Riya se baat kar rahe ho..._`;
-
-      if (isReplyToBot && messageReply) {
-        return api.sendMessage(finalReply, threadID, messageReply.messageID);
-      } else {
-        return api.sendMessage(finalReply, threadID, messageID);
-      }
+      const finalReply = `🔥 ${botReply} 🔥\n\n_Tumhari naughty Riya se baat kar rahe ho..._`;
+      return api.sendMessage(finalReply, threadID, isReplyToRiya ? messageReply.messageID : messageID);
 
     } catch (apiError) {
       console.error("Riya API Error:", apiError);

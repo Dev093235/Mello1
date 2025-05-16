@@ -33,11 +33,5 @@ jobs:
     - name: Start the bot
       env:
         PORT: 8080
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # <-- यह लाइन जोड़ी गई है
-        # अगर आपके पास VoiceRSS_API_KEY या GIPHY_API_KEY Secret हैं
-        # तो उन्हें भी यहाँ इसी फॉर्मेट में जोड़ सकते हैं
-        # VOICERSS_API_KEY: ${{ secrets.VOICERSS_API_KEY }}
-        # GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
       run: npm start
-
-# ... (rest of your workflow file)
+Ye hh mera yml

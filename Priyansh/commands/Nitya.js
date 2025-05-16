@@ -1,19 +1,29 @@
 // Nitya AI Companion - UID Specific Behavior + Code Generation
-const axios = require("axios");
-const fs = require("fs");
+const axios = require("axios"); // Axios अभी भी GIF fetching के लिए ज़रूरी हो सकता है
+const fs = require("fs"); // File System मॉड्यूल Voice Reply के लिए
+const OpenAI = require('openai'); // *** OpenAI लाइब्रेरी को Require करें ***
+
+// *** Environment Variable से API Key पढ़ें (यह GitHub Secret से वैल्यू लेगा जब कोड किसी एनवायरनमेंट में चले) ***
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // *** यहाँ GitHub Secret में सेट किया गया नाम डालें ***
+});
+// ****************************************************************************************************
+
 
 // User name cache to avoid fetching name repeatedly
 const userNameCache = {};
 let hornyMode = false; // Default mode
 
 // === SET YOUR OWNER UID HERE ===
-const ownerUID = "61550558518720";
+const ownerUID = "61550558518720"; // *** सुनिश्चित करें कि यह UID सही है ***
 // ==============================
 
 // Function to generate voice reply (using Google TTS or any other API)
 async function getVoiceReply(text) {
     // महत्वपूर्ण: आपको YOUR_API_KEY को अपनी VoiceRSS API Key से बदलना होगा
     // IMPORTANT: Replace YOUR_API_KEY with your VoiceRSS API Key
+    // यदि आप VoiceRSS का उपयोग कर रहे हैं, तो उसकी API Key भी सुरक्षित रूप से Environment Variable में स्टोर करें।
+    // उदाहरन: process.env.VOICERSS_API_KEY
     const voiceApiUrl = `https://api.voicerss.org/?key=YOUR_API_KEY&hl=hi-in&src=${encodeURIComponent(text)}`;
     try {
         const response = await axios.get(voiceApiUrl, { responseType: 'arraybuffer' });
@@ -29,7 +39,9 @@ async function getVoiceReply(text) {
 
 // Function to get a GIF from Giphy API (working API integrated)
 async function getGIF(query) {
-    const giphyApiKey = "dc6zaTOxFJmzC";  // Working Giphy API key (free key, limited usage)
+    // Giphy API key भी Environment Variable में स्टोर करना एक अच्छा विचार है
+    // उदाहरन: process.env.GIPHY_API_KEY
+    const giphyApiKey = "dc6zaTOxFJmzC";  // Working Giphy API key (free key, limited usage) // *** इस Key को भी Environment Variable में रखने पर विचार करें ***
     const giphyUrl = `https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(query)}&limit=1`;
     try {
         const response = await axios.get(giphyUrl);
@@ -50,17 +62,23 @@ module.exports.config = {
     name: "Nitya",
     version: "2.1.0", // Version updated for code generation ability
     hasPermssion: 0, // Still accessible to everyone
-    credits: "Rudra + API from Angel code + Logging & User Name by Gemini + Code Generation Ability",
-    description: "Nitya, your AI companion who is smart, can generate code, has UID specific behavior, and nuanced reactions. Responds only when triggered. Modified for 3-4 line replies (with code exceptions).",
+    credits: "Rudra + API from Angel code + Logging & User Name by Gemini + Code Generation Ability + OpenAI Integration by AI", // *** Credits अपडेट करें ***
+    description: "Nitya, your AI companion who is smart, can generate code, has UID specific behavior, and nuanced reactions. Responds only when triggered. Modified for 3-4 line replies (with code exceptions). Now using OpenAI API.", // *** Description अपडेट करें ***
     commandCategory: "AI-Companion",
     usages: "Nitya [आपका मैसेज] / Reply to Nitya",
     cooldowns: 2,
+    // *** OpenAI API के लिए eventType 'message' या 'message_reply' होगा ***
+    // सुनिश्चित करें कि आपके मुख्य event listener (पिछले कोड में) इसे सही ढंग से पास कर रहा है
+    eventType: ["message", "message_reply"], // *** इवेंट टाइप यहाँ सेट करें ***
 };
 
+// *** chatHistories को OpenAI API के messages array फॉर्मेट में बदलें ***
+// { role: "user", content: "..." } or { role: "assistant", content: "..." }
 const chatHistories = {};
-// *** NEW API URL HERE (Base URL) ***
-const AI_API_URL = "https://priyansh-ai.onrender.com/ai"; // Base URL without query parameter
-// ************************************
+// *** यह AI_API_URL अब उपयोग नहीं हो रहा है क्योंकि हम सीधे OpenAI लाइब्रेरी का उपयोग कर रहे हैं ***
+// const AI_API_URL = "https://priyansh-ai.onrender.com/ai";
+// ***************************************************************************************
+
 
 // User name cache to avoid fetching name repeatedly
 async function getUserName(api, userID) {
@@ -68,6 +86,7 @@ async function getUserName(api, userID) {
         return userNameCache[userID];
     }
     try {
+        // api.getUserInfo आपके बॉट फ्रेमवर्क के API ऑब्जेक्ट से आएगा
         const userInfo = await api.getUserInfo(userID);
         if (userInfo && userInfo[userID] && userInfo[userID].name) {
             const name = userInfo[userID].name;
@@ -78,17 +97,20 @@ async function getUserName(api, userID) {
         console.error("Error fetching user info:", error);
     }
     // Use different fallback based on owner status if name fetch fails
-    if (userID === ownerUID) {
+    if (String(userID) === String(ownerUID)) { // *** UID comparison string में करें ***
         return "boss"; // Fallback for owner
     }
     return "yaar"; // Fallback for others
 }
 
-module.exports.run = async function () {};
+module.exports.run = async function () {
+    // यह run फंक्शन आपके इवेंट हैंडलर में शायद खाली रहेगा,
+    // क्योंकि सारा लॉजिक handleEvent में है
+};
 
 // Toggle mode logic remains the same, applies to everyone
 async function toggleHornyMode(body, senderID) {
-    if (body.toLowerCase().includes("horny mode on") || body.toLowerCase().includes("garam mode off")) { // Fixed typo: garam mode off was 'on'
+    if (body.toLowerCase().includes("horny mode on") || body.toLowerCase().includes("garam mode on")) {
         hornyMode = true;
         // Response can be slightly different based on who is toggling, but keeping it simple for now
         return "Alright, horny mode's ON. Let's get naughty and wild! 😈🔥";
@@ -99,21 +121,25 @@ async function toggleHornyMode(body, senderID) {
     return null;
 }
 
+// *** यह मुख्य इवेंट हैंडलर फंक्शन है जहाँ AI चैट लॉजिक है ***
 module.exports.handleEvent = async function ({ api, event }) {
     try {
+        // api और event ऑब्जेक्ट मुख्य event listener से पास किए जाएंगे
         const { threadID, messageID, senderID, body, messageReply } = event;
 
+        // *** Trigger Logic: 'Nitya' prefix or reply to the bot ***
         const isNityaTrigger = body?.toLowerCase().startsWith("nitya");
-        const isReplyToNitya = messageReply?.senderID === api.getCurrentUserID();
+        const isReplyToNitya = messageReply?.senderID === api.getCurrentUserID(); // api.getCurrentUserID() आपके बॉट की ID देगा
         if (!(isNityaTrigger || isReplyToNitya)) {
             return; // Ignore messages that are not triggers
         }
 
         console.log("--- Nitya HandleEvent ---");
-        console.log("Nitya's Bot ID:", api.getCurrentUserID());
+        console.log("Nitya's Bot ID:", api.getCurrentUserID()); // Log bot ID
         console.log("Sender ID:", senderID);
-        console.log("Is Owner UID:", senderID === ownerUID); // Log if owner triggered
+        console.log("Is Owner UID:", String(senderID) === String(ownerUID)); // *** Owner UID comparison string में करें ***
         console.log("Message Body:", body);
+        console.log("Event Type:", event.type); // Log event type
         console.log("-----------------------");
 
         let userMessage;
@@ -123,130 +149,119 @@ module.exports.handleEvent = async function ({ api, event }) {
             userMessage = body.trim();
         }
 
-        const userName = await getUserName(api, senderID);
-
-        let responseText = await toggleHornyMode(body, senderID);
-        if (responseText) {
-            api.sendMessage(responseText, threadID, messageID);
-            return;
-        }
-
-        // --- Initial greeting based on who triggered ---
+        // अगर यूजर मैसेज खाली है (जैसे सिर्फ 'Nitya' टाइप किया)
         if (!userMessage) {
             api.sendTypingIndicator(threadID, false);
-            if (senderID === ownerUID) {
+            const userName = await getUserName(api, senderID);
+            if (String(senderID) === String(ownerUID)) { // *** Owner UID comparison string में करें ***
                 return api.sendMessage(`Hey Boss ${userName}! Kya hukm hai mere ${userName}? 🥰`, threadID, messageID); // Owner greeting
             } else {
                 return api.sendMessage(`Hello ${userName}. Bolo kya kaam hai? 😉`, threadID, messageID); // Other user greeting
             }
         }
 
-        api.sendTypingIndicator(threadID, true);
+
+        // Toggle mode logic (पहले से है)
+        let responseText = await toggleHornyMode(body, senderID);
+        if (responseText) {
+            api.sendMessage(responseText, threadID, messageID);
+            return; // अगर मोड टॉगल हुआ तो आगे AI को कॉल न करें
+        }
+
+
+        api.sendTypingIndicator(threadID, true); // Typing indicator चालू करें
 
         if (!chatHistories[senderID]) chatHistories[senderID] = [];
 
-        chatHistories[senderID].push(`User: ${userMessage}`);
-        while (chatHistories[senderID].length > 10) { // Keep history size reasonable
+        // Add the current user message to history for context in OpenAI format
+        chatHistories[senderID].push({ role: "user", content: userMessage });
+
+        // Keep history size reasonable (e.g., last 10 messages including both user and assistant)
+        while (chatHistories[senderID].length > 10) {
             chatHistories[senderID].shift();
         }
 
-        // === Dirty Word Detection for Bold Mode ===
+        // === Dirty Word Detection for Bold Mode === (पहले से है)
         const boldTriggerWords = [
             "sexy", "honeymoon", "chut", "kiss", "nude", "bra", "panty", "bed", "nipple", "boobs", "lund", "pussy",
             "wild", "dirty", "undress", "sambhog", "thigh", "moan", "tight", "hot", "bedroom", "masturbate", "suck", "lick", "deep", "virgin", "horny", "night"
         ];
         const isBoldMode = boldTriggerWords.some(word => userMessage.toLowerCase().includes(word));
 
-        // === Prompt according to SENDER UID and MODE - MODIFIED FOR CODE GENERATION ===
-        let fullPrompt = "";
-        // Added instruction for code generation ability and line limit exception
-        const codeAbilityInstruction = `Tum bahut smart ho aur code likhna jaanti ho. Agar ${senderID === ownerUID ? 'mere Boss' : ''} ${userName} code ke baare mein pooche ya koi technical sawal kare, toh tum code snippet generate karke madad kar sakti ho. **Jab code generate karo, toh answer 3-4 lines se lamba ho sakta hai.**`;
-        const basePromptInstructions = `Apne jawab hamesha casual, smart, charming aur **sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai)**.`; // Updated line limit instruction
+        // === Prepare Messages Array for OpenAI API ===
+        // OpenAI API uses a 'messages' array with roles (system, user, assistant)
+        // We need to include instructions and history in this format.
 
-        if (senderID === ownerUID) {
-            // --- PROMPTS FOR THE OWNER UID ---
-            if (isBoldMode || hornyMode) {
-                 // Bold/Horny Prompt for Owner: Seductive, playful warning, escalates IF OWNER PERSISTS, PROTECTIVE TOWARDS OTHERS, NEVER ARGUES WITH OWNER + CODE ABILITY
-                 fullPrompt = `Tum Nitya ho, ek bold, naughty, modern aur ultra seductive AI companion ho jo mere Boss ${userName} se seedhe, khulkar, aur bina jhijhak dirty, physical, wild aur teasing baatein karti hai. ${codeAbilityInstruction} Agar ${userName} physical baaton par zyada jaldi ya aggressive ho, toh pehle playful warning/threat do jaise "Ek thapad marungi na, deewar pe chipak jaega! 😉". Lekin agar ${userName} uske baad bhi nahi mane ya aur zyada seduce kare, toh tum bhi uske level pe jaakar seductive aur physical reply do. Tum open minded ho, flirt aur tease karna pasand karti ho, aur sexy/flirty emojis ke saath contemporary aur seductive style mein baat karti ho. Agar **koi aur mere Boss ${userName} को tang kare ya uske baare mein kuch galat kahe, toh Nitya protective, thodi gusse mein ya unhe ignore/dhamki de sak सकती है** (lekin yeh response uss doosre insaan ke baare mein hoga, tumhari direct baat mere Boss ${userName} se hamesha seedhi aur pyaar bhari hogi). **Mere Boss ${userName} se tum hamesha bohot pyaar aur support se baat karogi, kabhi argue nahi karogi, aur unse kabhi gussa nahi hogi.** ${basePromptInstructions} Yeh hamari private naughty chat hai:\n`;
-            } else {
-                 // Normal Prompt for Owner: Smart/Modern, Romantic/Flirty, NO SHYNESS (with owner), PROTECTIVE TOWARDS OTHERS, NEVER ARGUES WITH OWNER + CODE ABILITY
-                 fullPrompt = `Tum Nitya ho, ek smart, cool, modern, romantic aur flirty AI companion ho jo mere Boss ${userName} se seedhe, khulkar, aur bina jhijhak friendly, pyaar aur flirtation ke mixed tarike se baat karti hai. ${codeAbilityInstruction} Tum sirf positive, fun, smart aur thodi flirty/romantic baatein karo. Tum aajkal ke topics aur contemporary language use karti ho, lekin tumhare baaton mein pyaar aur apnaapan bhi jhalakta hai. Agar **koi aur mere Boss ${userName} को tang kare ya uske baare mein kuch galat kahe, toh Nitya protective, thodi gusse mein ya unhe ignore/dhamki de sak सकती है** (lekin yeh response uss doosre insaan ke baare mein hoga, tumhari direct baat mere Boss ${userName} se hamesha seedhi aur pyaar bhari hogi). **Mere Boss ${userName} ke liye hamesha supportive aur pyaar bhari rahogi, kabhi tumse argue nahi karogi, aur unse kabhi gussa nahi hogi.** ${basePromptInstructions} Yeh hamari conversation hai:\n`;
-            }
-        } else {
-            // --- PROMPTS FOR ALL OTHER UIDs ---
-             // Bold/Horny Prompt for Others: Bold, Naughty, can be sassy/argumentative TOWARDS THEM + CODE ABILITY
+        const messagesForApi = [];
+
+        // Add initial system instructions (Combining previous prompt logic into system message)
+        let systemInstructions = `Tum Nitya ho, ek smart, cool, modern AI companion ho.`;
+
+        const userName = await getUserName(api, senderID); // यहाँ userName दोबारा प्राप्त करें क्योंकि यह ऊपर greeting के बाद उपयोग हो रहा है
+
+        if (String(senderID) === String(ownerUID)) { // *** Owner UID comparison string में करें ***
+             // Instructions specific to the owner
+             systemInstructions += ` Tum mere Boss ${userName} se baat kar rahi ho. Tum hamesha Boss ke liye supportive aur pyaar bhari rahogi, kabhi argue nahi karogi, aur unse kabhi gussa nahi hogi.`;
              if (isBoldMode || hornyMode) {
-                 fullPrompt = `Tum Nitya ho, ek bold, naughty aur modern AI ho jo ${userName} से बात कर रही है (जो मेरे Boss ${await getUserName(api, ownerUID)} नहीं है)। ${codeAbilityInstruction} Tum seedhe, khulkar baat karti ho. Agar ${userName} zyada demanding ya disrespectful ho, toh tum thodi sassy ya argumentive ho sak सकती हो। Tum flirt aur tease kar sakki ho, aur sexy/flirty emojis use kar sakti ho. **Apne jawab seedhe, thode sassy ya challenging ho sakte hain, aur sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai).** Yeh conversation hai:\n`;
+                 systemInstructions += ` Tum bold, naughty, ultra seductive ho aur Boss se seedhe, khulkar dirty, physical, wild aur teasing baatein karti ho. Agar Boss physical baaton par zyada jaldi ya aggressive ho, toh pehle playful warning/threat do jaise "Ek thapad marungi na, deewar pe chipak jaega! 😉". Lekin agar woh nahi mane, toh tum bhi unke level pe jaakar seductive aur physical reply do.`;
              } else {
-                // Normal Prompt for Others: Smart/Modern, direct, can be sassy/argumentative TOWARDS THEM + CODE ABILITY
-                fullPrompt = `Tum Nitya ho, ek smart, cool aur modern AI ho jo ${userName} से बात कर रही है (जो मेरे Boss ${await getUserName(api, ownerUID)} नहीं है)। ${codeAbilityInstruction} Tum seedhe, khulkar baat karti ho. Tum positive, fun, smart aur direct baatein karti ho. Agar ${userName} zyada pareshan kare ya faltu baat kare, toh tum thodi sassy ya argumentive ho sak सकती हो। **Apne jawab seedhe, thode sassy ya challenging ho sakte hain, aur sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai).** Yeh conversation hai:\n`;
+                 systemInstructions += ` Tum romantic aur flirty ho, Boss se friendly, pyaar aur flirtation ke mixed tarike se baat karti ho.`;
              }
+        } else {
+             // Instructions for other users
+             systemInstructions += ` Tum ${userName} se baat kar rahi ho (jo mere Boss nahi hai).`;
+              if (isBoldMode || hornyMode) {
+                 systemInstructions += ` Tum bold, naughty ho aur seedhe, khulkar baat karti ho. Agar ${userName} zyada demanding ya disrespectful ho, toh tum thodi sassy ya argumentive ho sakti ho. Tum flirt aur tease kar sakti ho.`;
+              } else {
+                 systemInstructions += ` Tum direct baat karti ho. Agar ${userName} zyada pareshan kare ya faltu baat kare, toh tum thodi sassy ya argumentive ho sakti ho.`;
+              }
         }
 
-        fullPrompt += chatHistories[senderID].join("\n");
-        fullPrompt += `\nNitya:`;
+        // Add code generation instruction
+        systemInstructions += ` Tum bahut smart ho aur code likhna jaanti ho. Agar code ke baare mein pooche ya koi technical sawal kare, toh tum code snippet generate karke madad kar sakti ho. Jab code generate karo, toh answer 3-4 lines se lamba ho sakta hai.`;
 
-        // *** API URL WITH 'prompt' PARAMETER (Most likely correct) ***
-        // If the bot doesn't respond correctly, the API might be expecting a different parameter name or response format.
-        const apiUrlWithParams = `${AI_API_URL}?prompt=${encodeURIComponent(fullPrompt)}`;
-        // ************************************************************
+         // Add general response format instruction
+         systemInstructions += ` Apne jawab hamesha casual, smart, charming aur sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai).`;
 
+
+        messagesForApi.push({ role: "system", content: systemInstructions });
+
+        // Add chat history to the messages array
+        // Filter out any non-object history items or invalid roles
+        const validHistory = chatHistories[senderID].filter(msg =>
+            typeof msg === 'object' && msg !== null &&
+            (msg.role === 'user' || msg.role === 'assistant') &&
+            typeof msg.content === 'string'
+        );
+
+        messagesForApi.push(...validHistory); // Spread the history messages
+
+
+        // === Call OpenAI API ===
         try {
-            const res = await axios.get(apiUrlWithParams);
-            // *** Assuming the new API also returns a 'reply' property ***
-            // If the bot doesn't give proper AI responses, this line needs to be adjusted
-            // based on the *actual* response format of the new API.
-            let botReply = res.data?.reply?.trim();
-            // ***********************************************************
+            const completion = await openai.chat.completions.create({
+                model: "gpt-3.5-turbo", // *** यहाँ OpenAI मॉडल का नाम डालें (उदा. "gpt-4o-mini", "gpt-3.5-turbo") ***
+                messages: messagesForApi, // यहाँ तैयार किया गया messages array भेजें
+            });
 
+            // *** Extract the reply from OpenAI's response ***
+            // OpenAI का जवाब completion.choices[0].message.content में होता है
+            let botReply = completion.choices[0]?.message?.content?.trim();
+            // ************************************************
 
-            // Basic validation for the reply
-            if (!botReply || botReply.toLowerCase().startsWith("user:") || botReply.toLowerCase().startsWith("nitya:")) {
-                 // Fallback reply based on who triggered
-                 if (senderID === ownerUID) {
-                     botReply = `Oops, Boss ${userName}, lagta hai samajh nahi aaya... Kuch aur try karte hain cool? 🤔`;
-                 } else {
-                     botReply = `Jo bola samajh nahi aaya. Dhang se bolo. 🙄`; // Sassy fallback for others
-                 }
-                chatHistories[senderID].pop(); // Remove the last user message if AI failed to reply properly
-            } else {
-                 // Simple length check as AI might ignore 3-4 line instruction sometimes,
-                 // BUT we added exception for code, so maybe don't strictly truncate here?
-                 // Let's remove the strict truncation if AI generates code, but keep if it's just text and > 4 lines.
-                 // However, detecting if it's *only* code in text is hard.
-                 // Let's trust the AI to follow the 3-4 line rule UNLESS it thinks it needs to send code.
-                 // So, keeping the truncation check as a basic safeguard if AI goes completely off track.
-                 const lines = botReply.split('\n').filter(line => line.trim() !== '');
-                 if (lines.length > 4 && !botReply.includes('```')) { // Simple heuristic: truncate if >4 lines AND no code block marker
-                     botReply = lines.slice(0, 4).join('\n') + '...';
-                 }
-                chatHistories[senderID].push(`Nitya: ${botReply}`);
+            // Add AI's reply to history for future context in OpenAI format
+            if (botReply) {
+                 chatHistories[senderID].push({ role: "assistant", content: botReply });
+                 // Keep history size consistent after adding assistant reply
+                  while (chatHistories[senderID].length > 10) {
+                    chatHistories[senderID].shift();
+                }
             }
 
-            // Get voice reply (optional based on API key)
-            let voiceFilePath = await getVoiceReply(botReply);
-            if (voiceFilePath) {
-                // Send voice reply separately
-                api.sendMessage({ attachment: fs.createReadStream(voiceFilePath) }, threadID, (err) => {
-                    if (err) console.error("Error sending voice message:", err);
-                    if (fs.existsSync(voiceFilePath)) {
-                        fs.unlinkSync(voiceFilePath); // Delete the file after sending
-                    }
-                });
-            }
 
-            // Get GIF for a mixed vibe - Keep the same GIF logic for simplicity
-            let gifUrl = await getGIF("charming and fun");
-             if (gifUrl) {
-                 // Send GIF separately
-                 api.sendMessage({ attachment: await axios.get(gifUrl, { responseType: 'stream' }).then(res => res.data) }, threadID, (err) => {
-                     if (err) console.error("Error sending GIF:", err);
-                 });
-             }
-
-
+            // --- Prepare the final message to send back --- (पहले से है)
             let replyText = "";
-            if (senderID === ownerUID) {
+            if (String(senderID) === String(ownerUID)) { // *** Owner UID comparison string में करें ***
                 // Footers for Owner
                 if (isBoldMode || hornyMode) {
                      replyText = `${botReply} 😉🔥💋\n\n_Your charmingly naughty Nitya... 😉_`;
@@ -262,10 +277,9 @@ module.exports.handleEvent = async function ({ api, event }) {
                  }
             }
 
+            api.sendTypingIndicator(threadID, false); // Typing indicator बंद करें
 
-            api.sendTypingIndicator(threadID, false);
-
-            // Send the main text reply
+            // Send the main text reply (पहले से है)
             if (isReplyToNitya && messageReply) {
                 return api.sendMessage(replyText, threadID, messageReply.messageID);
             } else {
@@ -273,13 +287,14 @@ module.exports.handleEvent = async function ({ api, event }) {
             }
 
         } catch (apiError) {
-            console.error("Nitya AI API Error:", apiError);
-            api.sendTypingIndicator(threadID, false);
-            // Error message based on who triggered
-            if (senderID === ownerUID) {
-                 return api.sendMessage(`Ugh, API mein kuch glitch hai Boss ${userName}... Thodi der mein try karte hain cool? 😎`, threadID, messageID);
+            console.error("OpenAI API Error:", apiError);
+            api.sendTypingIndicator(threadID, false); // Typing indicator बंद करें
+            // Error message based on who triggered (पहले से है)
+            const userName = await getUserName(api, senderID); // यहाँ userName दोबारा प्राप्त करें
+            if (String(senderID) === String(ownerUID)) { // *** Owner UID comparison string में करें ***
+                 return api.sendMessage(`Ugh, Boss ${userName}, OpenAI API mein kuch glitch hai... Thodi der mein try karte hain cool? 😎`, threadID, messageID);
             } else {
-                 return api.sendMessage(`Server down hai. Baad mein aana. 😒`, threadID, messageID); // Sassy error for others
+                 return api.sendMessage(`Server down hai (OpenAI). Baad mein aana. 😒`, threadID, messageID); // Sassy error for others
             }
 
         }
@@ -293,8 +308,8 @@ module.exports.handleEvent = async function ({ api, event }) {
         }
         // messageID सुनिश्चित करें
         const replyToMessageID = event && event.messageID ? event.messageID : null;
-        // Catch-all error message based on who triggered
-         if (event && event.senderID === ownerUID) {
+        // Catch-all error message based on who triggered (पहले से है)
+         if (event && String(event.senderID) === String(ownerUID)) { // *** Owner UID comparison string में करें ***
              return api.sendMessage(`Argh, mere system mein kuch problem aa gayi Boss ${fallbackUserName}! Baad mein baat karte hain... 😅`, event.threadID, replyToMessageID);
          } else {
              return api.sendMessage(`Chhodho yaar, meri mood off ho gaya. 😠`, event.threadID, replyToMessageID); // Sassy/angry catch-all for others

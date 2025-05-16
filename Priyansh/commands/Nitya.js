@@ -1,14 +1,10 @@
-// Nitya AI Companion - UID Specific Behavior + Code Generation
+// Nitya AI Companion - Mixed Style (Romantic/Flirty + Smart/Modern)
 const axios = require("axios");
 const fs = require("fs");
 
 // User name cache to avoid fetching name repeatedly
 const userNameCache = {};
 let hornyMode = false; // Default mode
-
-// === SET YOUR OWNER UID HERE ===
-const ownerUID = "61550558518720";
-// ==============================
 
 // Function to generate voice reply (using Google TTS or any other API)
 async function getVoiceReply(text) {
@@ -48,11 +44,11 @@ async function getGIF(query) {
 
 module.exports.config = {
     name: "Nitya",
-    version: "2.1.0", // Version updated for code generation ability
-    hasPermssion: 0, // Still accessible to everyone
-    credits: "Rudra + API from Angel code + Logging & User Name by Gemini + Code Generation Ability",
-    description: "Nitya, your AI companion who is smart, can generate code, has UID specific behavior, and nuanced reactions. Responds only when triggered. Modified for 3-4 line replies (with code exceptions).",
-    commandCategory: "AI-Companion",
+    version: "1.6.0", // Version updated for mixed style
+    hasPermssion: 0,
+    credits: "Rudra + API from Angel code + Logging & User Name by Gemini + Prompt Mixup",
+    description: "Nitya, your AI companion with a mix of romantic/flirty, smart, and modern styles. Responds only when you reply to her own messages or mention her name. Modified for 3-4 line replies.",
+    commandCategory: "AI-Companion", // Still AI-Companion
     usages: "Nitya [आपका मैसेज] / Reply to Nitya",
     cooldowns: 2,
 };
@@ -75,24 +71,18 @@ async function getUserName(api, userID) {
     } catch (error) {
         console.error("Error fetching user info:", error);
     }
-    // Use different fallback based on owner status if name fetch fails
-    if (userID === ownerUID) {
-        return "boss"; // Fallback for owner
-    }
-    return "yaar"; // Fallback for others
+    return "yaar"; // Casual fallback
 }
 
 module.exports.run = async function () {};
 
-// Toggle mode logic remains the same, applies to everyone
 async function toggleHornyMode(body, senderID) {
     if (body.toLowerCase().includes("horny mode on") || body.toLowerCase().includes("garam mode on")) {
         hornyMode = true;
-        // Response can be slightly different based on who is toggling, but keeping it simple for now
-        return "Alright, horny mode's ON. Let's get naughty and wild! 😈🔥";
+        return "Alright, horny mode's ON. Let's get naughty and wild! 😈🔥"; // Mix of modern and original bold
     } else if (body.toLowerCase().includes("horny mode off") || body.toLowerCase().includes("garam mode off")) {
         hornyMode = false;
-        return "Okay, switching back to our usual charming style. 😉";
+        return "Okay, switching back to our usual charming style. 😉"; // Mix of modern and original romantic
     }
     return null;
 }
@@ -103,22 +93,25 @@ module.exports.handleEvent = async function ({ api, event }) {
 
         const isNityaTrigger = body?.toLowerCase().startsWith("nitya");
         const isReplyToNitya = messageReply?.senderID === api.getCurrentUserID();
-        if (!(isNityaTrigger || isReplyToNitya)) {
-            return; // Ignore messages that are not triggers
+        if (isNityaTrigger || isReplyToNitya) {
+            console.log("--- Nitya HandleEvent ---");
+            console.log("Nitya's Bot ID:", api.getCurrentUserID());
+            console.log("Sender ID:", senderID);
+            console.log("Message Body:", body);
+            console.log("-----------------------");
         }
 
-        console.log("--- Nitya HandleEvent ---");
-        console.log("Nitya's Bot ID:", api.getCurrentUserID());
-        console.log("Sender ID:", senderID);
-        console.log("Is Owner UID:", senderID === ownerUID); // Log if owner triggered
-        console.log("Message Body:", body);
-        console.log("-----------------------");
-
         let userMessage;
+        let isTriggered = false;
+
         if (isNityaTrigger) {
             userMessage = body.slice(5).trim();
-        } else { // isReplyToNitya
+            isTriggered = true;
+        } else if (isReplyToNitya) {
             userMessage = body.trim();
+            isTriggered = true;
+        } else {
+            return;
         }
 
         const userName = await getUserName(api, senderID);
@@ -129,14 +122,10 @@ module.exports.handleEvent = async function ({ api, event }) {
             return;
         }
 
-        // --- Initial greeting based on who triggered ---
-        if (!userMessage) {
+        // --- Keep the modern initial greeting ---
+        if (isTriggered && !userMessage) {
             api.sendTypingIndicator(threadID, false);
-            if (senderID === ownerUID) {
-                return api.sendMessage(`Hey Boss ${userName}! Kya hukm hai mere ${userName}? 🥰`, threadID, messageID); // Owner greeting
-            } else {
-                return api.sendMessage(`Hello ${userName}. Bolo kya kaam hai? 😉`, threadID, messageID); // Other user greeting
-            }
+            return api.sendMessage(`Hey ${userName}! Sun rahi hoon... Kya chal raha hai? 😎`, threadID, messageID);
         }
 
         api.sendTypingIndicator(threadID, true);
@@ -155,30 +144,15 @@ module.exports.handleEvent = async function ({ api, event }) {
         ];
         const isBoldMode = boldTriggerWords.some(word => userMessage.toLowerCase().includes(word));
 
-        // === Prompt according to SENDER UID and MODE - MODIFIED FOR CODE GENERATION ===
+        // === Prompt according to mode - MODIFIED FOR MIXED PERSONA ===
         let fullPrompt = "";
-        // Added instruction for code generation ability and line limit exception
-        const codeAbilityInstruction = `Tum bahut smart ho aur code likhna jaanti ho. Agar ${senderID === ownerUID ? 'mere Boss' : ''} ${userName} code ke baare mein pooche ya koi technical sawal kare, toh tum code snippet generate karke madad kar sakti ho. **Jab code generate karo, toh answer 3-4 lines se lamba ho sakta hai.**`;
-        const basePromptInstructions = `Apne jawab hamesha casual, smart, charming aur **sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai)**.`; // Updated line limit instruction
 
-        if (senderID === ownerUID) {
-            // --- PROMPTS FOR THE OWNER UID ---
-            if (isBoldMode || hornyMode) {
-                 // Bold/Horny Prompt for Owner: Seductive, playful warning, escalates IF OWNER PERSISTS, PROTECTIVE TOWARDS OTHERS, NEVER ARGUES WITH OWNER + CODE ABILITY
-                 fullPrompt = `Tum Nitya ho, ek bold, naughty, modern aur ultra seductive AI companion ho jo mere Boss ${userName} se seedhe, khulkar, aur bina jhijhak dirty, physical, wild aur teasing baatein karti hai. ${codeAbilityInstruction} Agar ${userName} physical baaton par zyada jaldi ya aggressive ho, toh pehle playful warning/threat do jaise "Ek thapad marungi na, deewar pe chipak jaega! 😉". Lekin agar ${userName} uske baad bhi nahi mane ya aur zyada seduce kare, toh tum bhi uske level pe jaakar seductive aur physical reply do. Tum open minded ho, flirt aur tease karna pasand karti ho, aur sexy/flirty emojis ke saath contemporary aur seductive style mein baat karti ho. Agar **koi aur mere Boss ${userName} ko tang kare ya uske baare mein kuch galat kahe, toh Nitya protective, thodi gusse mein ya unhe ignore/dhamki de sakti hai** (lekin yeh response uss doosre insaan ke baare mein hoga, tumhari direct baat mere Boss ${userName} se hamesha seedhi aur pyaar bhari hogi). **Mere Boss ${userName} se tum hamesha bohot pyaar aur support se baat karogi, kabhi argue nahi karogi, aur unse kabhi gussa nahi hogi.** ${basePromptInstructions} Yeh hamari private naughty chat hai:\n`;
-            } else {
-                 // Normal Prompt for Owner: Smart/Modern, Romantic/Flirty, NO SHYNESS (with owner), PROTECTIVE TOWARDS OTHERS, NEVER ARGUES WITH OWNER + CODE ABILITY
-                 fullPrompt = `Tum Nitya ho, ek smart, cool, modern, romantic aur flirty AI companion ho jo mere Boss ${userName} se seedhe, khulkar, aur bina jhijhak friendly, pyaar aur flirtation ke mixed tarike se baat karti hai. ${codeAbilityInstruction} Tum sirf positive, fun, smart aur thodi flirty/romantic baatein karo. Tum aajkal ke topics aur contemporary language use karti ho, lekin tumhare baaton mein pyaar aur apnaapan bhi jhalakta hai. Agar **koi aur mere Boss ${userName} ko tang kare ya uske baare mein kuch galat kahe, toh Nitya protective, thodi gusse mein ya unhe ignore/dhamki de sakti hai** (lekin yeh response uss doosre insaan ke baare mein hoga, tumhari direct baat mere Boss ${userName} se hamesha seedhi aur pyaar bhari hogi). **Mere Boss ${userName} ke liye hamesha supportive aur pyaar bhari rahogi, kabhi tumse argue nahi karogi, aur unse kabhi gussa nahi hogi.** ${basePromptInstructions} Yeh hamari conversation hai:\n`;
-            }
+        if (isBoldMode || hornyMode) {
+            // *** MIXED PROMPT FOR BOLD/HORNY MODE (Modern + Seductive) ***
+            fullPrompt = `Tum Nitya ho, ek bold, naughty, modern aur ultra seductive AI companion ho jo ${userName} se dirty, physical, wild aur teasing baatein karti hai. Tum open minded ho, flirt aur tease karna pasand karti ho, aur sexy/flirty emojis ke saath contemporary aur seductive style mein baat karti ho. Tum intimate topics, fun fantasies aur ${userName} ke desires par cool aur bina jhijhak baat karti ho. **Har jawab thoda bold, teasing, seductive aur sirf 3-4 lines mein hi dena.** Yeh hamari private naughty chat hai:\n`;
         } else {
-            // --- PROMPTS FOR ALL OTHER UIDs ---
-             // Bold/Horny Prompt for Others: Bold, Naughty, can be sassy/argumentative TOWARDS THEM + CODE ABILITY
-             if (isBoldMode || hornyMode) {
-                 fullPrompt = `Tum Nitya ho, ek bold, naughty aur modern AI ho jo ${userName} se baat kar rahi hai (jo mere Boss ${await getUserName(api, ownerUID)} nahi hai). ${codeAbilityInstruction} Tum seedhe, khulkar baat karti ho. Agar ${userName} zyada demanding ya disrespectful ho, toh tum thodi sassy ya argumentive ho sakti ho. Tum flirt aur tease kar sakki ho, aur sexy/flirty emojis use kar sakti ho. **Apne jawab seedhe, thode sassy ya challenging ho sakte hain, aur sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai).** Yeh conversation hai:\n`;
-             } else {
-                // Normal Prompt for Others: Smart/Modern, direct, can be sassy/argumentative TOWARDS THEM + CODE ABILITY
-                fullPrompt = `Tum Nitya ho, ek smart, cool aur modern AI ho jo ${userName} se baat kar rahi hai (jo mere Boss ${await getUserName(api, ownerUID)} nahi hai). ${codeAbilityInstruction} Tum seedhe, khulkar baat karti ho. Tum positive, fun, smart aur direct baatein karti ho. Agar ${userName} zyada pareshan kare ya faltu baat kare, toh tum thodi sassy ya argumentive ho sakti ho. **Apne jawab seedhe, thode sassy ya challenging ho sakte hain, aur sirf 3-4 lines mein hi dena (lekin agar code generate karna pade, toh answer lamba ho sakta hai).** Yeh conversation hai:\n`;
-             }
+            // *** MIXED PROMPT FOR NORMAL MODE (Smart/Modern + Romantic/Flirty) ***
+            fullPrompt = `Tum Nitya ho, ek smart, cool, modern, romantic aur flirty AI companion ho jo ${userName} se friendly, pyaar aur flirtation ke mixed tarike se baat karti hai. Tum sirf positive, fun, smart aur thodi flirty/romantic baatein karo. Tum aajkal ke topics aur contemporary language use karti ho, lekin tumhare baaton mein pyaar aur apnaapan bhi jhalakta hai. **Apne jawab hamesha casual, smart, charming aur 3-4 lines mein hi dena.** Yeh hamari conversation hai:\n`;
         }
 
         fullPrompt += chatHistories[senderID].join("\n");
@@ -192,23 +166,14 @@ module.exports.handleEvent = async function ({ api, event }) {
 
             // Basic validation for the reply
             if (!botReply || botReply.toLowerCase().startsWith("user:") || botReply.toLowerCase().startsWith("nitya:")) {
-                 // Fallback reply based on who triggered
-                 if (senderID === ownerUID) {
-                     botReply = `Oops, Boss ${userName}, lagta hai samajh nahi aaya... Kuch aur try karte hain cool? 🤔`;
-                 } else {
-                     botReply = `Jo bola samajh nahi aaya. Dhang se bolo. 🙄`; // Sassy fallback for others
-                 }
+                 // Use the modern fallback reply
+                botReply = `Oops, lagta hai samajh nahi aaya ${userName}! Kuch aur try karte hain? 🤔`;
                 chatHistories[senderID].pop(); // Remove the last user message if AI failed to reply properly
             } else {
-                 // Simple length check as AI might ignore 3-4 line instruction sometimes,
-                 // BUT we added exception for code, so maybe don't strictly truncate here?
-                 // Let's remove the strict truncation if AI generates code, but keep if it's just text and > 4 lines.
-                 // However, detecting if it's *only* code in text is hard.
-                 // Let's trust the AI to follow the 3-4 line rule UNLESS it thinks it needs to send code.
-                 // So, keeping the truncation check as a basic safeguard if AI goes completely off track.
+                 // Simple length check as AI might ignore 3-4 line instruction sometimes
                  const lines = botReply.split('\n').filter(line => line.trim() !== '');
-                 if (lines.length > 4 && !botReply.includes('```')) { // Simple heuristic: truncate if >4 lines AND no code block marker
-                     botReply = lines.slice(0, 4).join('\n') + '...';
+                 if (lines.length > 4) {
+                     botReply = lines.slice(0, 4).join('\n') + '...'; // Truncate if too long
                  }
                 chatHistories[senderID].push(`Nitya: ${botReply}`);
             }
@@ -225,8 +190,8 @@ module.exports.handleEvent = async function ({ api, event }) {
                 });
             }
 
-            // Get GIF for a mixed vibe - Keep the same GIF logic for simplicity
-            let gifUrl = await getGIF("charming and fun");
+            // Get GIF for a mixed vibe
+            let gifUrl = await getGIF("charming and fun"); // Slightly changed GIF query again
              if (gifUrl) {
                  // Send GIF separately
                  api.sendMessage({ attachment: await axios.get(gifUrl, { responseType: 'stream' }).then(res => res.data) }, threadID, (err) => {
@@ -236,22 +201,13 @@ module.exports.handleEvent = async function ({ api, event }) {
 
 
             let replyText = "";
-            if (senderID === ownerUID) {
-                // Footers for Owner
-                if (isBoldMode || hornyMode) {
-                     replyText = `${botReply} 😉🔥💋\n\n_Your charmingly naughty Nitya... 😉_`;
-                } else {
-                     replyText = `${botReply} 😊💖✨`;
-                }
+            if (isBoldMode || hornyMode) {
+                 // Use a mixed footer
+                replyText = `${botReply} 😉🔥💋\n\n_Your charmingly naughty Nitya... 😏_`; // Mix of modern and original emojis/footer
             } else {
-                // Footers for Others (less elaborate)
-                 if (isBoldMode || hornyMode) {
-                      replyText = `${botReply} 😏`; // Just a sassy emoji
-                 } else {
-                      replyText = `${botReply} 🤔`; // Maybe a questioning/sassy emoji
-                 }
+                 // Use a mixed footer
+                replyText = `${botReply} 😊💖✨`; // Mix of modern and original emojis
             }
-
 
             api.sendTypingIndicator(threadID, false);
 
@@ -265,13 +221,8 @@ module.exports.handleEvent = async function ({ api, event }) {
         } catch (apiError) {
             console.error("Nitya AI API Error:", apiError);
             api.sendTypingIndicator(threadID, false);
-            // Error message based on who triggered
-            if (senderID === ownerUID) {
-                 return api.sendMessage(`Ugh, API mein kuch glitch hai Boss ${userName}... Thodi der mein try karte hain cool? 😎`, threadID, messageID);
-            } else {
-                 return api.sendMessage(`Server down hai. Baad mein aana. 😒`, threadID, messageID); // Sassy error for others
-            }
-
+            // Use the modern error message
+            return api.sendMessage(`Ugh, API mein kuch glitch hai yaar ${userName}... Thodi der mein try karte hain cool? 😎`, threadID, messageID);
         }
 
     } catch (err) {
@@ -283,11 +234,7 @@ module.exports.handleEvent = async function ({ api, event }) {
         }
         // messageID सुनिश्चित करें
         const replyToMessageID = event && event.messageID ? event.messageID : null;
-        // Catch-all error message based on who triggered
-         if (event && event.senderID === ownerUID) {
-             return api.sendMessage(`Argh, mere system mein kuch problem aa gayi Boss ${fallbackUserName}! Baad mein baat karte hain... 😅`, event.threadID, replyToMessageID);
-         } else {
-             return api.sendMessage(`Chhodho yaar, meri mood off ho gaya. 😠`, event.threadID, replyToMessageID); // Sassy/angry catch-all for others
-         }
+        // Use the modern catch-all error
+        return api.sendMessage(`Argh, mere system mein kuch problem aa gayi ${fallbackUserName}! Baad mein baat karte hain... 😅`, event.threadID, replyToMessageID);
     }
 };

@@ -1,4 +1,4 @@
-module.exports = function ({ api, models }) {
+Module.exports = function ({ api, models }) {
     const fs = require("fs");
     const Users = require("./controllers/users")({ models, api }),
         Threads = require("./controllers/threads")({ models, api }),
@@ -150,7 +150,7 @@ module.exports = function ({ api, models }) {
     const handleCommandEvent = require("./handle/handleCommandEvent")({ api, models, Users, Threads, Currencies });
     const handleReply = require("./handle/handleReply")({ api, models, Users, Threads, Currencies });
     const handleReaction = require("./handle/handleReaction")({ api, models, Users, Threads, Currencies });
-    const handleEvent = require("./handle/handleEvent")({ api, models, Users, Threads, Currencies });
+    const handleEvent = require("./handle/handleEvent")({ api, models, Users, Threads, Currencies }); // *** handleEvent required ***
     const handleCreateDatabase = require("./handle/handleCreateDatabase")({ api, Threads, Users, Currencies, models });
 
     //DEFINE DATLICH PATH
@@ -275,7 +275,9 @@ module.exports = function ({ api, models }) {
             handleCommand({ event });
             handleReply({ event });
             handleCommandEvent({ event });
-    
+            // *** Add the call to handleEvent here ***
+            handleEvent({ event }); // *** ADD THIS LINE ***
+
             break;
           case "event":
             handleEvent({ event });
